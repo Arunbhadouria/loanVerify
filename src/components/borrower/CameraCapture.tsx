@@ -227,23 +227,21 @@ export default function CameraCapture({ steps, onComplete, assetType }: Props) {
       )}
 
       {/* Camera view */}
-      {cameraActive && (
-        <div className="relative rounded-xl overflow-hidden bg-black">
-          <video ref={videoRef} autoPlay playsInline
-            className="w-full rounded-xl" />
-          <button onClick={capturePhoto}
-            disabled={verifying}
-            className="absolute bottom-4 left-1/2 -translate-x-1/2
-              w-16 h-16 bg-white rounded-full border-4 border-blue-500
-              hover:scale-95 disabled:opacity-50 transition shadow-lg" />
-          <div className="absolute top-4 right-4 bg-red-500 text-white
-            text-xs px-2 py-1 rounded-full animate-pulse">
-            LIVE
-          </div>
+      <div className={`relative rounded-xl overflow-hidden bg-black ${cameraActive ? 'block' : 'hidden'}`}>
+        <video ref={videoRef} autoPlay playsInline
+          className="w-full rounded-xl" />
+        <button onClick={capturePhoto}
+          disabled={verifying}
+          className="absolute bottom-4 left-1/2 -translate-x-1/2
+            w-16 h-16 bg-white rounded-full border-4 border-blue-500
+            hover:scale-95 disabled:opacity-50 transition shadow-lg" />
+        <div className="absolute top-4 right-4 bg-red-500 text-white
+          text-xs px-2 py-1 rounded-full animate-pulse">
+          LIVE
         </div>
-      )}
+      </div>
 
-      {!cameraActive && photos.length === 0 && (
+      {!cameraActive && photos.length === 0 && !modelLoading && (
         <button onClick={startCamera}
           className="w-full bg-blue-600 hover:bg-blue-700 py-6 rounded-xl
             font-semibold text-lg transition flex items-center justify-center gap-3">
