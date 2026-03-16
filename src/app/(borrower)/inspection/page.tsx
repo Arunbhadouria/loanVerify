@@ -67,7 +67,7 @@ export default function InspectionPage() {
               <div className="text-5xl">📸</div>
               <h2 className="text-2xl font-bold">Asset Inspection</h2>
               <p className="text-slate-400 text-sm">
-                We need a few photos of your {assetType} to assess its value. 
+                We need a few photos of your {assetType} to assess its value.
                 This replaces a physical field visit.
               </p>
             </div>
@@ -84,7 +84,7 @@ export default function InspectionPage() {
 
             <div className="bg-amber-950 border border-amber-800 rounded-xl p-4">
               <p className="text-amber-300 text-sm">
-                ⚠️ <strong>Important:</strong> Photos are GPS-tagged and timestamped. 
+                ⚠️ <strong>Important:</strong> Photos are GPS-tagged and timestamped.
                 Submitting fake or old photos will flag your application for fraud.
               </p>
             </div>
@@ -175,7 +175,11 @@ export default function InspectionPage() {
                 Follow each instruction carefully
               </p>
             </div>
-            <CameraCapture steps={photoSteps} onComplete={handlePhotosComplete} />
+            <CameraCapture
+              steps={photoSteps}
+              onComplete={handlePhotosComplete}
+              assetType={assetType}   // add this
+            />
           </div>
         )}
 

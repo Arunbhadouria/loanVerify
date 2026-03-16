@@ -1,5 +1,6 @@
 'use client'
 import { useRef, useState, useCallback } from 'react'
+import { verifyAssetPhoto, detectBlur, detectDarkness, AIVerificationResult } from '@/lib/imageAI'
 
 interface CaptureStep {
   id: string
@@ -10,6 +11,7 @@ interface CaptureStep {
 interface Props {
   steps: CaptureStep[]
   onComplete: (photos: CapturedPhoto[]) => void
+  assetType: string
 }
 
 export interface CapturedPhoto {
@@ -21,7 +23,7 @@ export interface CapturedPhoto {
   fraudFlags: string[]
 }
 
-export default function CameraCapture({ steps, onComplete }: Props) {
+export default function CameraCapture({ steps, onComplete, assetType }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [currentStep, setCurrentStep] = useState(0)
@@ -30,6 +32,9 @@ export default function CameraCapture({ steps, onComplete }: Props) {
   const [gpsStatus, setGpsStatus] = useState<'idle' | 'getting' | 'got' | 'failed'>('idle')
   const [currentGPS, setCurrentGPS] = useState<{ lat: number; lng: number } | null>(null)
   const [sessionStartTime] = useState(Date.now())
+  const [aiResults, setAiResults] = useState<Record<string, AIVerificationResult>>({})
+  const [verifying, setVerifying] = useState(false)
+  const [modelLoading, setModelLoading] = useState(false)
 
   async function startCamera() {
     try {
@@ -42,6 +47,12 @@ export default function CameraCapture({ steps, onComplete }: Props) {
         setCameraActive(true)
       }
       getGPS()
+
+      setModelLoading(true)
+      const { loadModel } = await import('@/lib/imageAI')
+      await loadModel()
+      setModelLoading(false)
+
     } catch (err) {
       alert('Camera access denied. Please allow camera permission.')
     }
@@ -61,23 +72,22 @@ export default function CameraCapture({ steps, onComplete }: Props) {
 
   function detectFraudFlags(capturedAt: string): string[] {
     const flags: string[] = []
-    const sessionAge = Date.now() - sessionStartTime
-    
-    // If photos taken too fast (less than 3 seconds between)
+
     if (photos.length > 0) {
       const lastPhoto = photos[photos.length - 1]
       const timeDiff = new Date(capturedAt).getTime() - new Date(lastPhoto.capturedAt).getTime()
       if (timeDiff < 3000) flags.push('Photos taken too quickly')
     }
 
-    // GPS missing
     if (gpsStatus !== 'got') flags.push('GPS location unavailable')
 
     return flags
   }
 
-  const capturePhoto = useCallback(() => {
+  const capturePhoto = useCallback(async () => {
     if (!videoRef.current || !canvasRef.current) return
+    setVerifying(true)
+
     const canvas = canvasRef.current
     const video = videoRef.current
     canvas.width = video.videoWidth
@@ -85,19 +95,47 @@ export default function CameraCapture({ steps, onComplete }: Props) {
     const ctx = canvas.getContext('2d')!
     ctx.drawImage(video, 0, 0)
 
-    // Timestamp watermark
     const capturedAt = new Date().toISOString()
+
+    // Timestamp watermark
     ctx.fillStyle = 'rgba(0,0,0,0.6)'
     ctx.fillRect(0, canvas.height - 40, canvas.width, 40)
     ctx.fillStyle = 'white'
     ctx.font = '14px monospace'
     ctx.fillText(
-      `${new Date().toLocaleString('en-IN')} | ${currentGPS ? `${currentGPS.lat.toFixed(4)}, ${currentGPS.lng.toFixed(4)}` : 'GPS unavailable'}`,
+      `${new Date().toLocaleString('en-IN')} | ${currentGPS
+        ? `${currentGPS.lat.toFixed(4)}, ${currentGPS.lng.toFixed(4)}`
+        : 'GPS unavailable'}`,
       10, canvas.height - 14
     )
 
     const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
     const fraudFlags = detectFraudFlags(capturedAt)
+
+    // Blur check
+    const { isBlurry, score: blurScore } = detectBlur(canvas)
+    if (isBlurry) fraudFlags.push(`Photo too blurry (score: ${blurScore})`)
+
+    // Darkness check
+    const { isDark, brightness } = detectDarkness(canvas)
+    if (isDark) fraudFlags.push(`Photo too dark (brightness: ${brightness}/255)`)
+
+    // AI asset verification
+    try {
+      const img = new Image()
+      img.src = dataUrl
+      await new Promise(r => { img.onload = r })
+      const aiResult = await verifyAssetPhoto(img, assetType)
+
+      if (aiResult.fraudFlag) fraudFlags.push(aiResult.fraudFlag)
+
+      setAiResults(prev => ({
+        ...prev,
+        [steps[currentStep].id]: aiResult
+      }))
+    } catch (e) {
+      console.error('AI verification failed:', e)
+    }
 
     const photo: CapturedPhoto = {
       stepId: steps[currentStep].id,
@@ -108,22 +146,23 @@ export default function CameraCapture({ steps, onComplete }: Props) {
       fraudFlags,
     }
 
+    setVerifying(false)
     const newPhotos = [...photos, photo]
     setPhotos(newPhotos)
 
     if (currentStep < steps.length - 1) {
       setCurrentStep(s => s + 1)
     } else {
-      // Stop camera
       const stream = videoRef.current?.srcObject as MediaStream
       stream?.getTracks().forEach(t => t.stop())
       setCameraActive(false)
       onComplete(newPhotos)
     }
-  }, [currentStep, photos, steps, currentGPS, gpsStatus])
+  }, [currentStep, photos, steps, currentGPS, gpsStatus, assetType])
 
   return (
     <div className="space-y-4">
+
       {/* Step indicator */}
       <div className="flex gap-2">
         {steps.map((_, i) => (
@@ -149,32 +188,57 @@ export default function CameraCapture({ steps, onComplete }: Props) {
         ${gpsStatus === 'got' ? 'bg-green-950 text-green-400' :
           gpsStatus === 'failed' ? 'bg-red-950 text-red-400' :
           'bg-slate-800 text-slate-400'}`}>
-        <span>{gpsStatus === 'got' ? '📍' : gpsStatus === 'failed' ? '⚠️' : '🔄'}</span>
         <span>
-          {gpsStatus === 'got' ? `GPS: ${currentGPS?.lat.toFixed(4)}, ${currentGPS?.lng.toFixed(4)}`
+          {gpsStatus === 'got' ? '📍' : gpsStatus === 'failed' ? '⚠️' : '🔄'}
+        </span>
+        <span>
+          {gpsStatus === 'got'
+            ? `GPS: ${currentGPS?.lat.toFixed(4)}, ${currentGPS?.lng.toFixed(4)}`
             : gpsStatus === 'failed' ? 'GPS unavailable — fraud flag will be raised'
             : gpsStatus === 'getting' ? 'Getting location...'
             : 'GPS not started'}
         </span>
       </div>
 
-      {/* Camera view */}
-      <div className={cameraActive ? "relative rounded-xl overflow-hidden bg-black" : "hidden"}>
-        <video ref={videoRef} autoPlay playsInline
-          className="w-full rounded-xl" />
-        <button onClick={capturePhoto}
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 
-            w-16 h-16 bg-white rounded-full border-4 border-blue-500 
-            hover:scale-95 transition shadow-lg" />
-        <div className="absolute top-4 right-4 bg-red-500 text-white 
-          text-xs px-2 py-1 rounded-full animate-pulse">
-          LIVE
+      {/* Model loading */}
+      {modelLoading && (
+        <div className="bg-blue-950 border border-blue-800 rounded-xl p-3
+          flex items-center gap-2">
+          <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent
+            rounded-full animate-spin" />
+          <p className="text-blue-400 text-sm">Loading AI verification model...</p>
         </div>
-      </div>
+      )}
 
-      {!cameraActive && (
+      {/* Verifying */}
+      {verifying && (
+        <div className="bg-slate-800 rounded-xl p-3 flex items-center gap-2">
+          <div className="w-4 h-4 border-2 border-white border-t-transparent
+            rounded-full animate-spin" />
+          <p className="text-slate-300 text-sm">Running AI verification...</p>
+        </div>
+      )}
+
+      {/* Camera view */}
+      {cameraActive && (
+        <div className="relative rounded-xl overflow-hidden bg-black">
+          <video ref={videoRef} autoPlay playsInline
+            className="w-full rounded-xl" />
+          <button onClick={capturePhoto}
+            disabled={verifying}
+            className="absolute bottom-4 left-1/2 -translate-x-1/2
+              w-16 h-16 bg-white rounded-full border-4 border-blue-500
+              hover:scale-95 disabled:opacity-50 transition shadow-lg" />
+          <div className="absolute top-4 right-4 bg-red-500 text-white
+            text-xs px-2 py-1 rounded-full animate-pulse">
+            LIVE
+          </div>
+        </div>
+      )}
+
+      {!cameraActive && photos.length === 0 && (
         <button onClick={startCamera}
-          className="w-full bg-blue-600 hover:bg-blue-700 py-6 rounded-xl 
+          className="w-full bg-blue-600 hover:bg-blue-700 py-6 rounded-xl
             font-semibold text-lg transition flex items-center justify-center gap-3">
           <span>📷</span> Start Camera
         </button>
@@ -190,17 +254,50 @@ export default function CameraCapture({ steps, onComplete }: Props) {
               <img src={photo.dataUrl} alt={`Photo ${i + 1}`}
                 className="w-full aspect-square object-cover rounded-lg" />
               {photo.fraudFlags.length > 0 && (
-                <div className="absolute top-1 right-1 bg-red-500 
-                  text-white text-xs rounded-full w-5 h-5 
+                <div className="absolute top-1 right-1 bg-red-500
+                  text-white text-xs rounded-full w-5 h-5
                   flex items-center justify-center">
                   !
                 </div>
               )}
-              <div className="absolute bottom-1 left-1 bg-green-500 
-                text-white text-xs rounded-full w-5 h-5 
+              <div className="absolute bottom-1 left-1 bg-green-500
+                text-white text-xs rounded-full w-5 h-5
                 flex items-center justify-center">
                 ✓
               </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* AI Verification Results */}
+      {Object.keys(aiResults).length > 0 && (
+        <div className="space-y-2">
+          <p className="text-slate-400 text-xs uppercase tracking-wide font-medium">
+            🤖 AI Verification Results
+          </p>
+          {Object.entries(aiResults).map(([stepId, result]) => (
+            <div key={stepId}
+              className={`rounded-xl p-3 border text-sm
+                ${result.isMatch
+                  ? 'bg-green-950 border-green-800'
+                  : 'bg-red-950 border-red-800'}`}>
+              <div className="flex items-center justify-between mb-1">
+                <span className={`font-medium
+                  ${result.isMatch ? 'text-green-400' : 'text-red-400'}`}>
+                  {result.isMatch ? '✅ Verified' : '⚠️ Mismatch'} — {stepId}
+                </span>
+                <span className="text-slate-400 text-xs">
+                  {result.confidence}% confident
+                </span>
+              </div>
+              <p className="text-slate-400 text-xs">{result.conditionHint}</p>
+              {result.fraudFlag && (
+                <p className="text-red-400 text-xs mt-1">🚩 {result.fraudFlag}</p>
+              )}
+              <p className="text-slate-500 text-xs mt-1">
+                Detected: {result.topLabels[0]}
+              </p>
             </div>
           ))}
         </div>
