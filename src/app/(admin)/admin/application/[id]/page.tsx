@@ -34,13 +34,13 @@ export default function ApplicationDetail() {
                     .select('*, users(*)')
                     .eq('id', id).single(),
                 supabase.from('assets')
-                    .select('*').eq('application_id', id).single(),
+                    .select('*').eq('application_id', id).maybeSingle(),
                 supabase.from('documents')
                     .select('*').eq('application_id', id),
                 supabase.from('ai_reports')
-                    .select('*').eq('application_id', id).single(),
+                    .select('*').eq('application_id', id).maybeSingle(),
                 supabase.from('credit_profiles')
-                    .select('*').eq('application_id', id).single(),
+                    .select('*').eq('application_id', id).maybeSingle(),
             ])
 
             setApp(appRes.data)
