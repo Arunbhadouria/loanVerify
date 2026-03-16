@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
 
 export default function AdminLogin() {
   const router = useRouter()
@@ -13,89 +12,93 @@ export default function AdminLogin() {
   async function login() {
     setLoading(true)
     setError('')
-    
-    // Demo credentials — replace with real Supabase auth in production
     if (email === 'officer@bank.com' && password === 'demo1234') {
       localStorage.setItem('admin_logged_in', 'true')
       localStorage.setItem('admin_name', 'Rajesh Kumar')
-      localStorage.setItem('admin_role', 'Senior Officer')
+      localStorage.setItem('admin_role', 'Senior Loan Officer')
       router.push('/admin/dashboard')
     } else {
-      setError('Invalid credentials. Demo: officer@bank.com / demo1234')
+      setError('Invalid credentials. Please try again.')
     }
     setLoading(false)
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center px-6">
-      <div className="max-w-sm w-full space-y-8">
+    <main className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Top accent bar */}
+      <div className="h-1.5 bg-green-700 w-full" />
 
-        {/* Header */}
-        <div className="text-center space-y-3">
-          <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center 
-            justify-center mx-auto text-2xl font-bold">
-            🏦
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold">Bank Officer Portal</h2>
-            <p className="text-slate-400 text-sm mt-1">LoanVerify Admin Dashboard</p>
-          </div>
-        </div>
+      <div className="flex-1 flex items-center justify-center px-6 py-12">
+        <div className="w-full max-w-md">
 
-        {/* Form */}
-        <div className="bg-slate-900 rounded-2xl p-6 space-y-4">
-          <div className="space-y-1">
-            <label className="text-slate-400 text-xs uppercase tracking-wide">
-              Email Address
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="officer@bank.com"
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl 
-                px-4 py-3 text-white placeholder-slate-500 focus:outline-none 
-                focus:border-blue-500"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-slate-400 text-xs uppercase tracking-wide">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="••••••••"
-              onKeyDown={e => e.key === 'Enter' && login()}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl 
-                px-4 py-3 text-white placeholder-slate-500 focus:outline-none 
-                focus:border-blue-500"
-            />
-          </div>
-
-          {error && (
-            <div className="bg-red-950 border border-red-800 rounded-xl p-3">
-              <p className="text-red-400 text-sm">{error}</p>
+          {/* Logo + Title */}
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-green-700 mb-5" style={{ borderRadius: 4 }}>
+              <span className="text-white text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif" }}>CT</span>
             </div>
-          )}
-
-          <div className="bg-slate-800 rounded-xl p-3">
-            <p className="text-slate-500 text-xs">
-              Demo credentials:<br />
-              📧 officer@bank.com<br />
-              🔑 demo1234
-            </p>
+            <h1 className="text-3xl font-bold text-gray-900" style={{ fontFamily: "'Playfair Display', serif" }}>
+              Officer Portal
+            </h1>
+            <p className="text-gray-500 text-sm mt-2">CrediTrust Bank — Loan Management System</p>
           </div>
 
-          <button
-            onClick={login}
-            disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 
-              py-4 rounded-xl font-semibold transition">
-            {loading ? 'Signing in...' : 'Sign In →'}
-          </button>
+          {/* Login Card */}
+          <div className="bg-white border border-gray-200 p-8 shadow-sm" style={{ borderRadius: 6 }}>
+            <h2 className="text-lg font-semibold text-gray-800 mb-6">Sign in to continue</h2>
+
+            <div className="space-y-5">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email Address</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="officer@bank.com"
+                  className="w-full border border-gray-300 px-4 py-3 text-gray-900 focus:outline-none focus:border-green-600 focus:ring-2 focus:ring-green-100 transition-colors"
+                  style={{ borderRadius: 4 }}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  onKeyDown={e => e.key === 'Enter' && login()}
+                  className="w-full border border-gray-300 px-4 py-3 text-gray-900 focus:outline-none focus:border-green-600 focus:ring-2 focus:ring-green-100 transition-colors"
+                  style={{ borderRadius: 4 }}
+                />
+              </div>
+
+              {error && (
+                <div className="bg-red-50 border border-red-200 px-4 py-3" style={{ borderRadius: 4 }}>
+                  <p className="text-red-700 text-sm font-medium">⚠ {error}</p>
+                </div>
+              )}
+
+              <button
+                onClick={login}
+                disabled={loading}
+                className="w-full bg-green-700 hover:bg-green-800 disabled:opacity-50 text-white font-bold py-3.5 text-base transition-colors"
+                style={{ borderRadius: 4 }}
+              >
+                {loading ? 'Signing in...' : 'Sign In →'}
+              </button>
+            </div>
+
+            {/* Demo credentials */}
+            <div className="mt-6 bg-green-50 border border-green-200 px-4 py-3" style={{ borderRadius: 4 }}>
+              <p className="text-green-800 text-xs font-semibold mb-1">Demo Credentials</p>
+              <p className="text-green-700 text-sm font-mono">officer@bank.com / demo1234</p>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <p className="text-center text-xs text-gray-400 mt-6">
+            © 2025 CrediTrust Bank. Authorized personnel only.
+          </p>
         </div>
       </div>
     </main>

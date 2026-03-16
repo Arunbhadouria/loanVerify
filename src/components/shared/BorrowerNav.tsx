@@ -2,11 +2,10 @@
 import { usePathname } from 'next/navigation'
 
 const STEPS = [
-  { href: '/login', icon: '🔐', label: 'Login' },
-  { href: '/onboarding', icon: '📋', label: 'Profile' },
-  { href: '/inspection', icon: '📸', label: 'Inspect' },
-  { href: '/score', icon: '📊', label: 'Score' },
-  { href: '/status', icon: '✅', label: 'Status' },
+  { href: '/onboarding', label: 'Profile', num: 1 },
+  { href: '/inspection', label: 'Photos', num: 2 },
+  { href: '/score', label: 'Score', num: 3 },
+  { href: '/status', label: 'Status', num: 4 },
 ]
 
 export default function BorrowerNav() {
@@ -16,35 +15,42 @@ export default function BorrowerNav() {
   if (pathname === '/' || pathname === '/login') return null
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t 
-      border-slate-800 px-4 py-3 z-40">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-green-600 px-4 py-3 z-40 shadow-lg">
       <div className="flex justify-around max-w-md mx-auto">
-        {STEPS.filter(s => s.href !== '/login').map((step, i) => {
-          const realIndex = i + 1 // offset because we removed login
-          const isDone = realIndex < currentIndex
-          const isCurrent = realIndex === currentIndex
+        {STEPS.map((step, i) => {
+          const isDone = i < currentIndex
+          const isCurrent = i === currentIndex
           return (
-            <div key={step.href} className="flex flex-col items-center gap-1">
-              <div className={`w-9 h-9 rounded-full flex items-center 
-                justify-center text-sm transition
+            <div key={step.href} className="flex flex-col items-center gap-1 min-w-0">
+              <div className={`w-10 h-10 flex items-center justify-center text-sm font-bold transition-all
                 ${isDone
                   ? 'bg-green-600 text-white'
                   : isCurrent
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-800 text-slate-500'}`}>
-                {isDone ? '✓' : step.icon}
+                  ? 'bg-green-700 text-white shadow-md shadow-green-200'
+                  : 'bg-gray-100 text-gray-400 border border-gray-200'}`}
+                style={{ borderRadius: 4 }}
+              >
+                {isDone ? '✓' : step.num}
               </div>
-              <span className={`text-xs
+              <span className={`text-xs font-medium truncate
                 ${isCurrent
-                  ? 'text-white font-medium'
+                  ? 'text-green-700'
                   : isDone
-                  ? 'text-green-400'
-                  : 'text-slate-500'}`}>
+                  ? 'text-green-500'
+                  : 'text-gray-400'}`}>
                 {step.label}
               </span>
             </div>
           )
         })}
+      </div>
+
+      {/* Progress bar */}
+      <div className="max-w-md mx-auto mt-2 h-1 bg-gray-100 overflow-hidden" style={{ borderRadius: 2 }}>
+        <div
+          className="h-full bg-green-600 transition-all duration-500"
+          style={{ width: `${currentIndex >= 0 ? ((currentIndex) / (STEPS.length - 1)) * 100 : 0}%` }}
+        />
       </div>
     </div>
   )

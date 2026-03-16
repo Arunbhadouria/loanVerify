@@ -39,23 +39,17 @@ export default function ScorePage() {
     fetchAIExplanation(result.score, result.breakdown, onboarding.loan_amount, result.band)
   }, [])
 
-  async function fetchAIExplanation(
-    score: number, breakdown: Record<string, number>,
-    loanAmount: string, riskBand: string
-  ) {
+  async function fetchAIExplanation(score: number, breakdown: Record<string, number>, loanAmount: string, riskBand: string) {
     setLoadingAI(true)
     try {
       const res = await fetch('/api/claude', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'score_explanation',
-          data: { score, breakdown, loanAmount: parseFloat(loanAmount), riskBand }
-        })
+        body: JSON.stringify({ type: 'score_explanation', data: { score, breakdown, loanAmount: parseFloat(loanAmount), riskBand } })
       })
       const data = await res.json()
       setExplanation(data.message)
-    } catch (e) {
+    } catch {
       setExplanation('Unable to load AI explanation. Please check your connection.')
     }
     setLoadingAI(false)
@@ -67,7 +61,6 @@ export default function ScorePage() {
     const photos = JSON.parse(localStorage.getItem('inspection_photos') || '[]')
     const assetDetails = JSON.parse(localStorage.getItem('asset_details') || '{}')
 
-    // Save to Supabase
     const { data: user } = await supabase
       .from('users').insert({
         phone: localStorage.getItem('user_phone') || '9999999999',
@@ -79,7 +72,6 @@ export default function ScorePage() {
       }).select().single()
 
     const fraudFlags = photos.flatMap((p: any) => p.fraudFlags)
-
     const { data: application } = await supabase
       .from('applications').insert({
         user_id: user?.id,
@@ -92,151 +84,157 @@ export default function ScorePage() {
         status: 'pending'
       }).select().single()
 
-      if (application) {
-        await supabase.from('assets').insert({
+    if (application) {
+      await supabase.from('assets').insert({
+        application_id: application.id,
+        asset_type: onboarding.asset_type,
+        asset_description: assetDetails.description,
+        estimated_value: parseFloat(assetDetails.estimated_value || '0'),
+        condition: assetDetails.condition,
+        location_lat: photos[0]?.gpsLat,
+        location_lng: photos[0]?.gpsLng,
+      })
+      await supabase.from('ai_reports').insert({ application_id: application.id, score_explanation: explanation })
+      if (photos?.length > 0) {
+        await supabase.from('documents').insert(photos.map((p: any) => ({
           application_id: application.id,
-          asset_type: onboarding.asset_type,
-          asset_description: assetDetails.description,
-          estimated_value: parseFloat(assetDetails.estimated_value || '0'),
-          condition: assetDetails.condition,
-          location_lat: photos[0]?.gpsLat,
-          location_lng: photos[0]?.gpsLng,
-        })
-  
-        await supabase.from('ai_reports').insert({
-          application_id: application.id,
-          score_explanation: explanation,
-        })
-  
-        if (photos && photos.length > 0) {
-          const documentInserts = photos.map((p: any) => ({
-            application_id: application.id,
-            doc_type: p.stepId,
-            file_url: p.dataUrl,
-            gps_lat: p.gpsLat,
-            gps_lng: p.gpsLng,
-            captured_at: p.capturedAt,
-            fraud_flag: p.fraudFlags?.join(', ') || null,
-          }))
-          await supabase.from('documents').insert(documentInserts)
-        }
-  
-        localStorage.setItem('application_id', application.id)
+          doc_type: p.stepId,
+          file_url: p.dataUrl,
+          gps_lat: p.gpsLat,
+          gps_lng: p.gpsLng,
+          captured_at: p.capturedAt,
+          fraud_flag: p.fraudFlags?.join(', ') || null,
+        })))
       }
-
+      localStorage.setItem('application_id', application.id)
+    }
     setSubmitting(false)
     router.push('/status')
   }
 
+  const bandConfig = {
+    low: { label: 'HIGH RISK', color: 'text-red-700', bg: 'bg-red-50 border-red-200' },
+    medium: { label: 'MODERATE RISK', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' },
+    high: { label: 'LOW RISK', color: 'text-green-700', bg: 'bg-green-50 border-green-200' },
+  }
+  const bandStyle = bandConfig[band]
+
   const radarData = [
-    { subject: 'Payment History', value: breakdown.paymentHistory || 0 },
+    { subject: 'Payment', value: breakdown.paymentHistory || 0 },
     { subject: 'Collateral', value: breakdown.collateral || 0 },
     { subject: 'Income', value: breakdown.incomeStability || 0 },
     { subject: 'Debt Ratio', value: breakdown.debtToIncome || 0 },
     { subject: 'Behavioral', value: breakdown.behavioral || 0 },
   ]
 
+  const tabs = [
+    { key: 'score', label: 'Score Breakdown' },
+    { key: 'ai', label: 'AI Analysis' },
+    { key: 'details', label: 'Loan Details' },
+  ] as const
+
   return (
-    <main className="min-h-screen bg-slate-950 text-white px-6 py-8">
-      <div className="max-w-md mx-auto space-y-6">
+    <main className="min-h-screen bg-white">
+      {/* Bank Header */}
+      <div className="bg-green-700 px-6 py-4">
+        <p className="text-white font-bold text-lg" style={{ fontFamily: "'Playfair Display', serif" }}>CrediTrust Bank</p>
+        <p className="text-green-200 text-xs">Credit Assessment</p>
+      </div>
 
-        <h2 className="text-2xl font-bold text-center">Your Credit Score</h2>
-
-        {score > 0 && <ScoreDial score={score} />}
+      <div className="max-w-md mx-auto px-6 py-6 space-y-5 pb-36">
+        {/* Score + Band */}
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4" style={{ fontFamily: "'Playfair Display', serif" }}>Your Credit Score</h1>
+          {score > 0 && <ScoreDial score={score} />}
+          <div className={`inline-flex items-center gap-2 px-4 py-2 border mt-3 ${bandStyle.bg}`} style={{ borderRadius: 4 }}>
+            <span className={`text-xs font-bold tracking-wider ${bandStyle.color}`}>{bandStyle.label}</span>
+          </div>
+        </div>
 
         {/* Tabs */}
-        <div className="flex bg-slate-900 rounded-xl p-1 gap-1">
-          {(['score', 'ai', 'details'] as const).map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium transition capitalize
-                ${activeTab === tab
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-400 hover:text-white'}`}>
-              {tab === 'ai' ? '🤖 AI Analysis' : tab === 'score' ? '📊 Breakdown' : '📋 Details'}
+        <div className="flex border border-gray-200 overflow-hidden" style={{ borderRadius: 4 }}>
+          {tabs.map(tab => (
+            <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+              className={`flex-1 py-3 text-sm font-semibold transition-colors border-r last:border-r-0 border-gray-200
+                ${activeTab === tab.key
+                  ? 'bg-green-700 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+              {tab.label}
             </button>
           ))}
         </div>
 
         {/* Score breakdown */}
         {activeTab === 'score' && (
-          <div className="space-y-3">
-            <ResponsiveContainer width="100%" height={220}>
+          <div className="space-y-4">
+            <ResponsiveContainer width="100%" height={200}>
               <RadarChart data={radarData}>
-                <PolarGrid stroke="#334155" />
-                <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                <Radar name="Score" dataKey="value" stroke="#3b82f6"
-                  fill="#3b82f6" fillOpacity={0.3} />
-                <Tooltip contentStyle={{ background: '#1e293b', border: 'none', borderRadius: 8 }} />
+                <PolarGrid stroke="#d1fae5" />
+                <PolarAngleAxis dataKey="subject" tick={{ fill: '#6b7280', fontSize: 11 }} />
+                <Radar dataKey="value" stroke="#15803d" fill="#15803d" fillOpacity={0.25} />
+                <Tooltip contentStyle={{ background: '#fff', border: '1px solid #d1fae5', borderRadius: 4 }} />
               </RadarChart>
             </ResponsiveContainer>
 
-            {Object.entries({
-              'Payment History': { value: breakdown.paymentHistory, weight: '35%' },
-              'Collateral Strength': { value: breakdown.collateral, weight: '25%' },
-              'Income Stability': { value: breakdown.incomeStability, weight: '20%' },
-              'Debt-to-Income': { value: breakdown.debtToIncome, weight: '10%' },
-              'Behavioral': { value: breakdown.behavioral, weight: '10%' },
-            }).map(([label, { value, weight }]) => (
-              <div key={label} className="space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-300">{label}</span>
-                  <span className="text-slate-500">{weight} • {Math.round(value || 0)}/100</span>
+            <div className="bg-white border border-gray-200 p-4 space-y-4" style={{ borderRadius: 6 }}>
+              {Object.entries({
+                'Payment History': { value: breakdown.paymentHistory, weight: '35%' },
+                'Collateral Strength': { value: breakdown.collateral, weight: '25%' },
+                'Income Stability': { value: breakdown.incomeStability, weight: '20%' },
+                'Debt-to-Income': { value: breakdown.debtToIncome, weight: '10%' },
+                'Behavioral': { value: breakdown.behavioral, weight: '10%' },
+              }).map(([label, { value, weight }]) => (
+                <div key={label}>
+                  <div className="flex justify-between text-sm mb-1.5">
+                    <span className="font-medium text-gray-800">{label}</span>
+                    <span className="text-gray-400 text-xs">{weight} • <strong className="text-gray-700">{Math.round(value || 0)}/100</strong></span>
+                  </div>
+                  <div className="h-2 bg-gray-100 overflow-hidden" style={{ borderRadius: 2 }}>
+                    <div className="h-full bg-green-600 transition-all duration-1000" style={{ width: `${value || 0}%`, borderRadius: 2 }} />
+                  </div>
                 </div>
-                <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-500 rounded-full transition-all duration-1000"
-                    style={{ width: `${value || 0}%` }} />
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
 
         {/* AI Analysis */}
         {activeTab === 'ai' && (
-          <div className="bg-slate-900 rounded-2xl p-5">
+          <div className="bg-white border border-gray-200 p-5" style={{ borderRadius: 6 }}>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-7 h-7 bg-green-700 flex items-center justify-center text-white text-xs font-bold" style={{ borderRadius: 4 }}>AI</div>
+              <h3 className="font-bold text-gray-900" style={{ fontFamily: "'Playfair Display', serif" }}>AI Credit Analysis</h3>
+            </div>
             {loadingAI ? (
-              <div className="space-y-3 animate-pulse">
-                <div className="h-4 bg-slate-700 rounded w-3/4" />
-                <div className="h-4 bg-slate-700 rounded w-full" />
-                <div className="h-4 bg-slate-700 rounded w-5/6" />
-                <div className="h-4 bg-slate-700 rounded w-full" />
-                <div className="h-4 bg-slate-700 rounded w-2/3" />
-                <p className="text-slate-400 text-xs text-center pt-2">
-                  🤖 AI is analyzing your profile...
-                </p>
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className={`h-4 animate-pulse bg-gray-100 ${i % 3 === 0 ? 'w-3/4' : 'w-full'}`} style={{ borderRadius: 2 }} />
+                ))}
+                <p className="text-gray-400 text-xs text-center pt-1">Analyzing your profile...</p>
               </div>
             ) : (
-              <div className="prose prose-invert prose-sm max-w-none">
-                <p className="text-slate-300 leading-relaxed whitespace-pre-line text-sm">
-                  {explanation}
-                </p>
-              </div>
+              <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line">{explanation}</p>
             )}
           </div>
         )}
 
         {/* Details */}
         {activeTab === 'details' && (() => {
-          const onboarding = typeof window !== 'undefined'
-            ? JSON.parse(localStorage.getItem('onboarding_data') || '{}')
-            : {}
-          const assetDetails = typeof window !== 'undefined'
-            ? JSON.parse(localStorage.getItem('asset_details') || '{}')
-            : {}
+          const onboarding = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('onboarding_data') || '{}') : {}
+          const assetDetails = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('asset_details') || '{}') : {}
           return (
-            <div className="space-y-3">
+            <div className="bg-white border border-gray-200 overflow-hidden" style={{ borderRadius: 6 }}>
               {[
                 { label: 'Loan Requested', value: `₹${parseFloat(onboarding.loan_amount || 0).toLocaleString('en-IN')}` },
-                { label: 'Asset Type', value: onboarding.asset_type },
+                { label: 'Collateral Type', value: onboarding.asset_type },
                 { label: 'Asset Condition', value: assetDetails.condition },
                 { label: 'Asset Value', value: `₹${parseFloat(assetDetails.estimated_value || 0).toLocaleString('en-IN')}` },
                 { label: 'Monthly Income', value: `₹${parseFloat(onboarding.monthly_income || 0).toLocaleString('en-IN')}` },
-                { label: 'Risk Band', value: band.toUpperCase() },
-              ].map(item => (
-                <div key={item.label}
-                  className="flex justify-between items-center bg-slate-900 rounded-xl px-4 py-3">
-                  <span className="text-slate-400 text-sm">{item.label}</span>
-                  <span className="text-white font-medium text-sm capitalize">{item.value}</span>
+                { label: 'Risk Classification', value: band.toUpperCase() },
+              ].map((item, i) => (
+                <div key={item.label} className={`flex justify-between items-center px-5 py-4 ${i !== 0 ? 'border-t border-gray-100' : ''}`}>
+                  <span className="text-gray-500 text-sm">{item.label}</span>
+                  <span className="text-gray-900 font-semibold text-sm capitalize">{item.value}</span>
                 </div>
               ))}
             </div>
@@ -244,15 +242,18 @@ export default function ScorePage() {
         })()}
 
         {/* Submit */}
-        <button onClick={submitToBank} disabled={submitting || score === 0}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 
-            py-4 rounded-xl font-semibold text-lg transition">
-          {submitting ? 'Submitting...' : '🏦 Submit to Bank →'}
-        </button>
-
-        <p className="text-slate-500 text-xs text-center">
-          By submitting, you consent to the bank reviewing your application and photos.
-        </p>
+        <div className="space-y-3 pt-2">
+          <button
+            onClick={submitToBank}
+            disabled={submitting || score === 0}
+            className="w-full bg-green-700 hover:bg-green-800 disabled:opacity-50 text-white font-bold py-5 text-lg transition-colors"
+            style={{ borderRadius: 4 }}>
+            {submitting ? 'Submitting Application...' : '🏦 Submit to Bank →'}
+          </button>
+          <p className="text-gray-400 text-xs text-center">
+            By submitting, you consent to the bank reviewing your application and uploaded photos.
+          </p>
+        </div>
       </div>
     </main>
   )
