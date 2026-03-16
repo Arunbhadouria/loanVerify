@@ -92,24 +92,37 @@ export default function ScorePage() {
         status: 'pending'
       }).select().single()
 
-    if (application) {
-      await supabase.from('assets').insert({
-        application_id: application.id,
-        asset_type: onboarding.asset_type,
-        asset_description: assetDetails.description,
-        estimated_value: parseFloat(assetDetails.estimated_value || '0'),
-        condition: assetDetails.condition,
-        location_lat: photos[0]?.gpsLat,
-        location_lng: photos[0]?.gpsLng,
-      })
-
-      await supabase.from('ai_reports').insert({
-        application_id: application.id,
-        score_explanation: explanation,
-      })
-
-      localStorage.setItem('application_id', application.id)
-    }
+      if (application) {
+        await supabase.from('assets').insert({
+          application_id: application.id,
+          asset_type: onboarding.asset_type,
+          asset_description: assetDetails.description,
+          estimated_value: parseFloat(assetDetails.estimated_value || '0'),
+          condition: assetDetails.condition,
+          location_lat: photos[0]?.gpsLat,
+          location_lng: photos[0]?.gpsLng,
+        })
+  
+        await supabase.from('ai_reports').insert({
+          application_id: application.id,
+          score_explanation: explanation,
+        })
+  
+        if (photos && photos.length > 0) {
+          const documentInserts = photos.map((p: any) => ({
+            application_id: application.id,
+            doc_type: p.stepId,
+            file_url: p.dataUrl,
+            gps_lat: p.gpsLat,
+            gps_lng: p.gpsLng,
+            captured_at: p.capturedAt,
+            fraud_flag: p.fraudFlags?.join(', ') || null,
+          }))
+          await supabase.from('documents').insert(documentInserts)
+        }
+  
+        localStorage.setItem('application_id', application.id)
+      }
 
     setSubmitting(false)
     router.push('/status')
