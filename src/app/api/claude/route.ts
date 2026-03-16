@@ -1,7 +1,7 @@
-import Anthropic from '@anthropic-ai/sdk'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 import { NextRequest, NextResponse } from 'next/server'
 
-const client = new Anthropic()
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
 export async function POST(req: NextRequest) {
   const { type, data } = await req.json()
@@ -68,15 +68,17 @@ Be formal and concise. Use ₹ for currency.
     prompt = data.message
   }
 
-  const message = await client.messages.create({
-    model: 'claude-3-5-sonnet-20241022',
-    max_tokens: 1000,
-    messages: [{ role: 'user', content: prompt }]
-  })
+  try {
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    const result = await model.generateContent(prompt)
+    const response = await result.response
+    const text = response.text()
 
-  return NextResponse.json({
-    message: message.content[0].type === 'text'
-      ? message.content[0].text
-      : ''
-  })
+    return NextResponse.json({
+      message: text
+    })
+  } catch (error) {
+    console.error('Error generating with Gemini:', error)
+    return NextResponse.json({ message: 'Error generating content' }, { status: 500 })
+  }
 }
