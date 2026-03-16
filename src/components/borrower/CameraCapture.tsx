@@ -47,14 +47,21 @@ export default function CameraCapture({ steps, onComplete, assetType }: Props) {
         setCameraActive(true)
       }
       getGPS()
+    } catch (err) {
+      alert('Camera access denied. Please allow camera permission.')
+      console.error('Camera error:', err)
+      return
+    }
 
+    try {
       setModelLoading(true)
       const { loadModel } = await import('@/lib/imageAI')
       await loadModel()
-      setModelLoading(false)
-
     } catch (err) {
-      alert('Camera access denied. Please allow camera permission.')
+      console.error('AI model loading error:', err)
+      alert('Note: AI verification model failed to load. You can still capture photos, but AI verification will be skipped.')
+    } finally {
+      setModelLoading(false)
     }
   }
 
