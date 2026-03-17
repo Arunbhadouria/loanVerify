@@ -119,15 +119,12 @@ export default function CameraCapture({ steps, onComplete, assetType }: Props) {
     const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
     const fraudFlags = detectFraudFlags(capturedAt)
 
-    // Blur check
     const { isBlurry, score: blurScore } = detectBlur(canvas)
     if (isBlurry) fraudFlags.push(`Photo too blurry (score: ${blurScore})`)
 
-    // Darkness check
     const { isDark, brightness } = detectDarkness(canvas)
     if (isDark) fraudFlags.push(`Photo too dark (brightness: ${brightness}/255)`)
 
-    // AI asset verification
     try {
       const img = new Image()
       img.src = dataUrl
@@ -170,31 +167,34 @@ export default function CameraCapture({ steps, onComplete, assetType }: Props) {
   return (
     <div className="space-y-4">
 
-      {/* Step indicator */}
-      <div className="flex gap-2">
+      {/* Step progress indicator */}
+      <div className="flex gap-1.5">
         {steps.map((_, i) => (
           <div key={i}
-            className={`h-2 flex-1 rounded-full transition-colors
-              ${i < photos.length ? 'bg-green-500' :
-                i === currentStep ? 'bg-blue-500' : 'bg-slate-700'}`}
+            className="h-1.5 flex-1 transition-colors"
+            style={{
+              borderRadius: 2,
+              background: i < photos.length ? '#15803d' : i === currentStep ? '#16a34a' : '#e5e7eb'
+            }}
           />
         ))}
       </div>
 
       {/* Current instruction */}
-      <div className="bg-slate-800 rounded-xl p-4 text-center">
+      <div className="bg-gray-50 border border-gray-200 p-4 text-center" style={{ borderRadius: 6 }}>
         <div className="text-3xl mb-2">{steps[currentStep]?.icon}</div>
-        <p className="font-semibold">{steps[currentStep]?.instruction}</p>
-        <p className="text-slate-400 text-sm mt-1">
-          Photo {currentStep + 1} of {steps.length}
-        </p>
+        <p className="font-semibold text-gray-900">{steps[currentStep]?.instruction}</p>
+        <p className="text-gray-400 text-sm mt-1">Photo {currentStep + 1} of {steps.length}</p>
       </div>
 
       {/* GPS Status */}
-      <div className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm
-        ${gpsStatus === 'got' ? 'bg-green-950 text-green-400' :
-          gpsStatus === 'failed' ? 'bg-red-950 text-red-400' :
-          'bg-slate-800 text-slate-400'}`}>
+      <div className={`flex items-center gap-2 px-4 py-2 text-sm border ${
+        gpsStatus === 'got'
+          ? 'bg-green-50 border-green-200 text-green-800'
+          : gpsStatus === 'failed'
+          ? 'bg-red-50 border-red-200 text-red-700'
+          : 'bg-gray-50 border-gray-200 text-gray-500'
+      }`} style={{ borderRadius: 4 }}>
         <span>
           {gpsStatus === 'got' ? '📍' : gpsStatus === 'failed' ? '⚠️' : '🔄'}
         </span>
@@ -209,65 +209,59 @@ export default function CameraCapture({ steps, onComplete, assetType }: Props) {
 
       {/* Model loading */}
       {modelLoading && (
-        <div className="bg-blue-950 border border-blue-800 rounded-xl p-3
-          flex items-center gap-2">
-          <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent
-            rounded-full animate-spin" />
-          <p className="text-blue-400 text-sm">Loading AI verification model...</p>
+        <div className="bg-green-50 border border-green-200 px-4 py-3 flex items-center gap-2" style={{ borderRadius: 4 }}>
+          <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-green-800 text-sm">Loading AI verification model...</p>
         </div>
       )}
 
       {/* Verifying */}
       {verifying && (
-        <div className="bg-slate-800 rounded-xl p-3 flex items-center gap-2">
-          <div className="w-4 h-4 border-2 border-white border-t-transparent
-            rounded-full animate-spin" />
-          <p className="text-slate-300 text-sm">Running AI verification...</p>
+        <div className="bg-gray-50 border border-gray-200 px-4 py-3 flex items-center gap-2" style={{ borderRadius: 4 }}>
+          <div className="w-4 h-4 border-2 border-green-700 border-t-transparent rounded-full animate-spin" />
+          <p className="text-gray-600 text-sm">Running AI verification...</p>
         </div>
       )}
 
       {/* Camera view */}
-      <div className={`relative rounded-xl overflow-hidden bg-black ${cameraActive ? 'block' : 'hidden'}`}>
-        <video ref={videoRef} autoPlay playsInline
-          className="w-full rounded-xl" />
-        <button onClick={capturePhoto}
+      <div className={`relative overflow-hidden bg-black ${cameraActive ? 'block' : 'hidden'}`} style={{ borderRadius: 6 }}>
+        <video ref={videoRef} autoPlay playsInline className="w-full" />
+        <button
+          onClick={capturePhoto}
           disabled={verifying}
-          className="absolute bottom-4 left-1/2 -translate-x-1/2
-            w-16 h-16 bg-white rounded-full border-4 border-blue-500
-            hover:scale-95 disabled:opacity-50 transition shadow-lg" />
-        <div className="absolute top-4 right-4 bg-red-500 text-white
-          text-xs px-2 py-1 rounded-full animate-pulse">
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 w-16 h-16 bg-white rounded-full border-4 border-green-700 hover:scale-95 disabled:opacity-50 transition shadow-lg"
+        />
+        <div className="absolute top-4 right-4 bg-red-500 text-white text-xs px-2 py-1 rounded-full animate-pulse">
           LIVE
         </div>
       </div>
 
+      {/* Start Camera button */}
       {!cameraActive && photos.length === 0 && !modelLoading && (
-        <button onClick={startCamera}
-          className="w-full bg-blue-600 hover:bg-blue-700 py-6 rounded-xl
-            font-semibold text-lg transition flex items-center justify-center gap-3">
+        <button
+          onClick={startCamera}
+          className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-5 text-base transition-colors flex items-center justify-center gap-3"
+          style={{ borderRadius: 4 }}
+        >
           <span>📷</span> Start Camera
         </button>
       )}
 
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* Captured photos */}
+      {/* Captured photos thumbnail grid */}
       {photos.length > 0 && (
         <div className="grid grid-cols-3 gap-2">
           {photos.map((photo, i) => (
             <div key={i} className="relative">
               <img src={photo.dataUrl} alt={`Photo ${i + 1}`}
-                className="w-full aspect-square object-cover rounded-lg" />
+                className="w-full aspect-square object-cover" style={{ borderRadius: 4 }} />
               {photo.fraudFlags.length > 0 && (
-                <div className="absolute top-1 right-1 bg-red-500
-                  text-white text-xs rounded-full w-5 h-5
-                  flex items-center justify-center">
+                <div className="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
                   !
                 </div>
               )}
-              <div className="absolute bottom-1 left-1 bg-green-500
-                text-white text-xs rounded-full w-5 h-5
-                flex items-center justify-center">
+              <div className="absolute bottom-1 left-1 bg-green-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                 ✓
               </div>
             </div>
@@ -278,31 +272,27 @@ export default function CameraCapture({ steps, onComplete, assetType }: Props) {
       {/* AI Verification Results */}
       {Object.keys(aiResults).length > 0 && (
         <div className="space-y-2">
-          <p className="text-slate-400 text-xs uppercase tracking-wide font-medium">
-            🤖 AI Verification Results
-          </p>
+          <p className="text-gray-500 text-xs uppercase tracking-wide font-semibold">🤖 AI Verification Results</p>
           {Object.entries(aiResults).map(([stepId, result]) => (
             <div key={stepId}
-              className={`rounded-xl p-3 border text-sm
-                ${result.isMatch
-                  ? 'bg-green-950 border-green-800'
-                  : 'bg-red-950 border-red-800'}`}>
+              className={`p-3 border text-sm ${
+                result.isMatch
+                  ? 'bg-green-50 border-green-200'
+                  : 'bg-red-50 border-red-200'
+              }`}
+              style={{ borderRadius: 4 }}
+            >
               <div className="flex items-center justify-between mb-1">
-                <span className={`font-medium
-                  ${result.isMatch ? 'text-green-400' : 'text-red-400'}`}>
+                <span className={`font-semibold text-sm ${result.isMatch ? 'text-green-700' : 'text-red-700'}`}>
                   {result.isMatch ? '✅ Verified' : '⚠️ Mismatch'} — {stepId}
                 </span>
-                <span className="text-slate-400 text-xs">
-                  {result.confidence}% confident
-                </span>
+                <span className="text-gray-400 text-xs">{result.confidence}% confident</span>
               </div>
-              <p className="text-slate-400 text-xs">{result.conditionHint}</p>
+              <p className="text-gray-500 text-xs">{result.conditionHint}</p>
               {result.fraudFlag && (
-                <p className="text-red-400 text-xs mt-1">🚩 {result.fraudFlag}</p>
+                <p className="text-red-600 text-xs mt-1">🚩 {result.fraudFlag}</p>
               )}
-              <p className="text-slate-500 text-xs mt-1">
-                Detected: {result.topLabels[0]}
-              </p>
+              <p className="text-gray-400 text-xs mt-1">Detected: {result.topLabels[0]}</p>
             </div>
           ))}
         </div>
