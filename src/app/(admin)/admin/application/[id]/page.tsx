@@ -60,6 +60,7 @@ export default function ApplicationDetail() {
 
     async function generateFullReport(appData: any, assetData: any) {
         setLoadingReport(true)
+        const b = Array.isArray(appData.users) ? appData.users[0] : appData.users
         try {
             const res = await fetch('/api/claude', {
                 method: 'POST',
@@ -67,7 +68,7 @@ export default function ApplicationDetail() {
                 body: JSON.stringify({
                     type: 'full_report',
                     data: {
-                        borrowerName: appData.users?.full_name,
+                        borrowerName: b?.full_name,
                         loanAmount: appData.loan_amount,
                         loanPurpose: appData.loan_purpose,
                         score: appData.credit_score,
@@ -76,7 +77,7 @@ export default function ApplicationDetail() {
                         condition: assetData?.condition,
                         assetValue: assetData?.estimated_value,
                         location: `${assetData?.location_lat}, ${assetData?.location_lng}`,
-                        monthlyIncome: appData.users?.monthly_income,
+                        monthlyIncome: b?.monthly_income,
                         existingEMI: 0,
                         collateralRatio: Math.round((assetData?.estimated_value / appData.loan_amount) * 100),
                         fraudFlags: appData.fraud_flags,
@@ -120,13 +121,15 @@ export default function ApplicationDetail() {
 
     if (loading) return (
         <div className="flex items-center justify-center h-64">
-            <div className="text-slate-400 animate-pulse">Loading application...</div>
+            <div className="text-gray-500 animate-pulse">Loading application...</div>
         </div>
     )
 
     if (!app) return (
-        <div className="text-center py-20 text-slate-500">Application not found</div>
+        <div className="text-center py-20 text-gray-500">Application not found</div>
     )
+
+    const borrower = Array.isArray(app.users) ? app.users[0] : app.users
 
     const radarData = creditProfile ? [
         { subject: 'Payment', value: creditProfile.payment_history_score || 0 },
@@ -146,16 +149,16 @@ export default function ApplicationDetail() {
             {/* Back + Header */}
             <div className="flex items-start gap-4">
                 <button onClick={() => router.push('/admin/dashboard')}
-                    className="text-slate-400 hover:text-white transition mt-1">
+                    className="text-gray-500 hover:text-gray-900 transition mt-1 font-medium text-sm flex items-center gap-1">
                     ← Back
                 </button>
                 <button
                     onClick={() => generatePDFReport({
-                        borrowerName: app.users?.full_name,
-                        phone: app.users?.phone,
-                        pan: app.users?.pan,
-                        occupation: app.users?.occupation,
-                        monthlyIncome: app.users?.monthly_income,
+                        borrowerName: borrower?.full_name,
+                        phone: borrower?.phone,
+                        pan: borrower?.pan,
+                        occupation: borrower?.occupation,
+                        monthlyIncome: borrower?.monthly_income,
                         loanAmount: app.loan_amount,
                         loanPurpose: app.loan_purpose,
                         creditScore: app.credit_score,
@@ -169,34 +172,34 @@ export default function ApplicationDetail() {
                         applicationId: app.id,
                         createdAt: app.created_at,
                     })}
-                    className="ml-auto bg-slate-800 hover:bg-slate-700 px-4 py-2 
-    rounded-xl text-sm font-medium transition flex items-center gap-2">
+                    className="ml-auto bg-white border border-gray-200 shadow-sm hover:bg-gray-50 text-gray-700 px-4 py-2 
+    rounded-lg text-sm font-semibold transition flex items-center gap-2">
                     📄 Download PDF
                 </button>
                 <div className="flex-1">
                     <div className="flex items-center gap-3 flex-wrap">
-                        <h1 className="text-2xl font-bold">{app.users?.full_name}</h1>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium border capitalize
+                        <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: "'Playfair Display', serif" }}>{borrower?.full_name}</h1>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold border capitalize
               ${({
-                                pending: 'bg-yellow-950 text-yellow-400 border-yellow-800',
-                                under_review: 'bg-blue-950 text-blue-400 border-blue-800',
-                                approved: 'bg-green-950 text-green-400 border-green-800',
-                                rejected: 'bg-red-950 text-red-400 border-red-800',
-                                more_info: 'bg-purple-950 text-purple-400 border-purple-800',
+                                pending: 'bg-amber-50 text-amber-800 border-amber-200',
+                                under_review: 'bg-blue-50 text-blue-800 border-blue-200',
+                                approved: 'bg-green-50 text-green-800 border-green-200',
+                                rejected: 'bg-red-50 text-red-800 border-red-200',
+                                more_info: 'bg-purple-50 text-purple-800 border-purple-200',
                             } as Record<string, string>)[app.status] || ''}`}>
                             {app.status?.replace('_', ' ')}
                         </span>
                         {(app.fraud_flags?.length || 0) > 0 && (
-                            <span className="bg-red-950 text-red-400 border border-red-800 
-                px-3 py-1 rounded-full text-xs font-medium">
+                            <span className="bg-red-50 text-red-700 border border-red-200 
+                px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
                                 🚩 {app.fraud_flags.length} Fraud Flag(s)
                             </span>
                         )}
                     </div>
-                    <p className="text-slate-400 text-sm mt-1">
+                    <p className="text-gray-500 text-sm mt-1">
                         Applied {new Date(app.created_at).toLocaleDateString('en-IN', {
                             day: 'numeric', month: 'long', year: 'numeric'
-                        })} • ID: {app.id.slice(0, 8)}...
+                        })} • ID: <span className="font-mono text-xs">{app.id.slice(0, 8)}</span>
                     </p>
                 </div>
             </div>
@@ -210,12 +213,12 @@ export default function ApplicationDetail() {
                     { label: 'Risk Band', value: app.risk_band?.toUpperCase(), icon: '⚠️', color: scoreColor },
                 ].map(stat => (
                     <div key={stat.label}
-                        className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                        className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                         <div className="flex items-center gap-2 mb-2">
                             <span>{stat.icon}</span>
-                            <span className="text-slate-400 text-xs">{stat.label}</span>
+                            <span className="text-gray-500 text-xs font-semibold">{stat.label}</span>
                         </div>
-                        <p className={`text-xl font-bold ${stat.color || 'text-white'}`}>
+                        <p className={`text-xl font-bold ${stat.color || 'text-gray-900'}`}>
                             {stat.value}
                         </p>
                     </div>
@@ -223,7 +226,7 @@ export default function ApplicationDetail() {
             </div>
 
             {/* Tabs */}
-            <div className="flex bg-slate-900 rounded-xl p-1 gap-1 overflow-x-auto">
+            <div className="flex bg-gray-100 rounded-xl p-1 gap-1 overflow-x-auto border border-gray-200 shadow-inner">
                 {([
                     { id: 'overview', label: '👤 Overview' },
                     { id: 'photos', label: '📸 Photos' },
@@ -231,10 +234,10 @@ export default function ApplicationDetail() {
                     { id: 'decision', label: '⚖️ Decision' },
                 ] as const).map(tab => (
                     <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                        className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition
+                        className={`flex-shrink-0 px-5 py-2.5 rounded-lg text-sm font-bold transition-all
               ${activeTab === tab.id
-                                ? 'bg-blue-600 text-white'
-                                : 'text-slate-400 hover:text-white'}`}>
+                                ? 'bg-white text-green-800 shadow-sm border border-gray-100'
+                                : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'}`}>
                         {tab.label}
                     </button>
                 ))}
@@ -245,55 +248,61 @@ export default function ApplicationDetail() {
                 <div className="grid md:grid-cols-2 gap-6">
 
                     {/* Borrower info */}
-                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-                        <h3 className="font-bold text-lg">Borrower Profile</h3>
-                        {[
-                            { label: 'Full Name', value: app.users?.full_name },
-                            { label: 'Phone', value: app.users?.phone },
-                            { label: 'Occupation', value: app.users?.occupation },
-                            { label: 'Monthly Income', value: `₹${app.users?.monthly_income?.toLocaleString('en-IN')}` },
-                            { label: 'PAN', value: app.users?.pan },
-                            { label: 'Aadhaar (Last 4)', value: `XXXX-XXXX-${app.users?.aadhaar_last4}` },
-                        ].map(item => (
-                            <div key={item.label}
-                                className="flex justify-between items-center py-2 
-                  border-b border-slate-800 last:border-0">
-                                <span className="text-slate-400 text-sm">{item.label}</span>
-                                <span className="text-white text-sm font-medium">{item.value}</span>
-                            </div>
-                        ))}
+                    <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6 space-y-4">
+                        <h3 className="font-bold text-lg text-gray-900" style={{ fontFamily: "'Playfair Display', serif" }}>Borrower Profile</h3>
+                        <div className="space-y-1">
+                            {[
+                                { label: 'Full Name', value: borrower?.full_name },
+                                { label: 'Phone', value: borrower?.phone },
+                                { label: 'Occupation', value: borrower?.occupation },
+                                { label: 'Monthly Income', value: `₹${borrower?.monthly_income?.toLocaleString('en-IN')}` },
+                                { label: 'PAN', value: borrower?.pan },
+                                { label: 'Aadhaar (Last 4)', value: `XXXX-XXXX-${borrower?.aadhaar_last4}` },
+                            ].map(item => (
+                                <div key={item.label}
+                                    className="flex justify-between items-center py-2.5 
+                      border-b border-gray-100 last:border-0">
+                                    <span className="text-gray-500 text-sm font-medium">{item.label}</span>
+                                    <span className="text-gray-900 text-sm font-bold">{item.value}</span>
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
                     {/* Asset info */}
                     <div className="space-y-4">
-                        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-                            <h3 className="font-bold text-lg">Collateral Asset</h3>
-                            {[
-                                { label: 'Type', value: asset?.asset_type },
-                                { label: 'Description', value: asset?.asset_description },
-                                { label: 'Condition', value: asset?.condition },
-                                { label: 'Estimated Value', value: `₹${asset?.estimated_value?.toLocaleString('en-IN')}` },
-                                { label: 'Location', value: asset?.location_lat ? `${asset.location_lat?.toFixed(4)}, ${asset.location_lng?.toFixed(4)}` : 'Not captured' },
-                            ].map(item => (
-                                <div key={item.label}
-                                    className="flex justify-between items-center py-2 
-                    border-b border-slate-800 last:border-0">
-                                    <span className="text-slate-400 text-sm">{item.label}</span>
-                                    <span className="text-white text-sm font-medium capitalize">{item.value}</span>
-                                </div>
-                            ))}
+                        <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6 space-y-4">
+                            <h3 className="font-bold text-lg text-gray-900" style={{ fontFamily: "'Playfair Display', serif" }}>Collateral Asset</h3>
+                            <div className="space-y-1">
+                                {[
+                                    { label: 'Type', value: asset?.asset_type },
+                                    { label: 'Description', value: asset?.asset_description },
+                                    { label: 'Condition', value: asset?.condition },
+                                    { label: 'Estimated Value', value: `₹${asset?.estimated_value?.toLocaleString('en-IN')}` },
+                                    { label: 'Location', value: asset?.location_lat ? `${asset.location_lat?.toFixed(4)}, ${asset.location_lng?.toFixed(4)}` : 'Not captured' },
+                                ].map(item => (
+                                    <div key={item.label}
+                                        className="flex justify-between items-center py-2.5 
+                        border-b border-gray-100 last:border-0">
+                                        <span className="text-gray-500 text-sm font-medium">{item.label}</span>
+                                        <span className="text-gray-900 text-sm font-bold capitalize">{item.value}</span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
 
                         {/* Fraud flags */}
                         {(app.fraud_flags?.length || 0) > 0 && (
-                            <div className="bg-red-950 border border-red-800 rounded-2xl p-5">
-                                <h3 className="font-bold text-red-400 mb-3">🚩 Fraud Flags Detected</h3>
+                            <div className="bg-red-50 border border-red-200 rounded-2xl p-5 shadow-sm">
+                                <h3 className="font-bold text-red-700 mb-3 flex items-center gap-2">
+                                    <span>🚩</span> Fraud Flags Detected
+                                </h3>
                                 <div className="space-y-2">
                                     {app.fraud_flags.map((flag: string, i: number) => (
                                         <div key={i}
-                                            className="flex items-center gap-2 bg-red-900 rounded-lg px-3 py-2">
-                                            <span className="text-red-400 text-xs">⚠️</span>
-                                            <span className="text-red-300 text-sm">{flag}</span>
+                                            className="flex items-center gap-2 bg-white border border-red-100 rounded-lg px-3 py-2 shadow-sm">
+                                            <span className="text-red-600 text-xs font-bold">⚠️</span>
+                                            <span className="text-red-800 text-sm font-medium">{flag}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -302,20 +311,22 @@ export default function ApplicationDetail() {
 
                         {/* Score radar */}
                         {creditProfile && (
-                            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-                                <h3 className="font-bold mb-3">Score Breakdown</h3>
-                                <ResponsiveContainer width="100%" height={180}>
+                            <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-5">
+                                <h3 className="font-bold mb-4 text-gray-900" style={{ fontFamily: "'Playfair Display', serif" }}>Score Breakdown</h3>
+                                <ResponsiveContainer width="100%" height={220}>
                                     <RadarChart data={radarData}>
-                                        <PolarGrid stroke="#334155" />
+                                        <PolarGrid stroke="#e5e7eb" />
                                         <PolarAngleAxis dataKey="subject"
-                                            tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                                        <Radar dataKey="value" stroke="#3b82f6"
-                                            fill="#3b82f6" fillOpacity={0.3} />
+                                            tick={{ fill: '#6b7280', fontSize: 11 }} />
+                                        <Radar dataKey="value" stroke="#15803d"
+                                            fill="#15803d" fillOpacity={0.4} />
                                         <Tooltip
                                             contentStyle={{
-                                                background: '#1e293b',
-                                                border: 'none',
-                                                borderRadius: 8
+                                                background: '#ffffff',
+                                                border: '1px solid #e5e7eb',
+                                                borderRadius: 8,
+                                                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                                                color: '#111827'
                                             }} />
                                     </RadarChart>
                                 </ResponsiveContainer>
@@ -329,44 +340,50 @@ export default function ApplicationDetail() {
             {activeTab === 'photos' && (
                 <div className="space-y-4">
                     {documents.length === 0 ? (
-                        <div className="text-center py-20 text-slate-500">
-                            <div className="text-4xl mb-3">📷</div>
-                            <p>No photos uploaded yet</p>
+                        <div className="text-center py-24 bg-white border border-gray-200 rounded-2xl text-gray-400">
+                            <div className="text-5xl mb-4">📷</div>
+                            <p className="text-lg font-semibold">No photos uploaded yet</p>
                         </div>
                     ) : (
-                        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
                             {documents.map((doc, i) => (
                                 <div key={i}
-                                    className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+                                    className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden group">
                                     {doc.file_url ? (
-                                        <img src={doc.file_url} alt={doc.doc_type}
-                                            className="w-full aspect-video object-cover" />
+                                        <div className="relative aspect-video overflow-hidden">
+                                            <img src={doc.file_url} alt={doc.doc_type}
+                                                className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                                        </div>
                                     ) : (
-                                        <div className="w-full aspect-video bg-slate-800 flex items-center 
-                      justify-center text-slate-500 text-sm">
+                                        <div className="w-full aspect-video bg-gray-50 flex items-center 
+                      justify-center text-gray-400 text-sm italic">
                                             Photo not available
                                         </div>
                                     )}
-                                    <div className="p-3 space-y-1">
-                                        <p className="text-sm font-medium capitalize">
+                                    <div className="p-4 space-y-2">
+                                        <p className="text-sm font-bold text-gray-900 capitalize">
                                             {doc.doc_type?.replace('_', ' ')}
                                         </p>
-                                        {doc.gps_lat && (
-                                            <p className="text-slate-400 text-xs">
-                                                📍 {doc.gps_lat?.toFixed(4)}, {doc.gps_lng?.toFixed(4)}
-                                            </p>
-                                        )}
-                                        {doc.captured_at && (
-                                            <p className="text-slate-400 text-xs">
-                                                🕐 {new Date(doc.captured_at).toLocaleString('en-IN')}
-                                            </p>
-                                        )}
-                                        {doc.fraud_flag && (
-                                            <p className="text-red-400 text-xs">🚩 {doc.fraud_flag}</p>
-                                        )}
-                                        {doc.is_verified && (
-                                            <p className="text-green-400 text-xs">✅ Verified</p>
-                                        )}
+                                        <div className="space-y-1">
+                                            {doc.gps_lat && (
+                                                <p className="text-gray-500 text-xs flex items-center gap-1">
+                                                    📍 {doc.gps_lat?.toFixed(4)}, {doc.gps_lng?.toFixed(4)}
+                                                </p>
+                                            )}
+                                            {doc.captured_at && (
+                                                <p className="text-gray-500 text-xs flex items-center gap-1">
+                                                    🕐 {new Date(doc.captured_at).toLocaleString('en-IN')}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="pt-2 flex flex-wrap gap-1">
+                                            {doc.fraud_flag && (
+                                                <span className="bg-red-50 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded border border-red-200">🚩 {doc.fraud_flag}</span>
+                                            )}
+                                            {doc.is_verified && (
+                                                <span className="bg-green-50 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded border border-green-200">✅ Verified</span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             ))}
@@ -377,56 +394,58 @@ export default function ApplicationDetail() {
 
             {/* AI Report Tab */}
             {activeTab === 'report' && (
-                <div className="space-y-4">
+                <div className="space-y-6">
                     {/* Score explanation */}
                     {aiReport?.score_explanation && (
-                        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-                            <h3 className="font-bold mb-3 flex items-center gap-2">
+                        <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
+                            <h3 className="font-bold mb-4 flex items-center gap-2 text-gray-900" style={{ fontFamily: "'Playfair Display', serif" }}>
                                 <span>📊</span> Score Explanation (Borrower View)
                             </h3>
-                            <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-line">
+                            <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line p-4 bg-gray-50 rounded-xl border border-gray-100">
                                 {aiReport.score_explanation}
                             </p>
                         </div>
                     )}
 
                     {/* Full report */}
-                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-bold flex items-center gap-2">
-                                <span>🤖</span> Full Assessment Report
+                    <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="font-bold flex items-center gap-2 text-gray-900" style={{ fontFamily: "'Playfair Display', serif" }}>
+                                <span>🤖</span> AI Assessment Report
                             </h3>
                             {!aiReport?.full_report && !loadingReport && (
                                 <button
                                     onClick={() => generateFullReport(app, asset)}
-                                    className="bg-blue-600 hover:bg-blue-700 px-4 py-2 
-                    rounded-lg text-sm font-medium transition">
-                                    Generate Report
+                                    className="bg-green-700 hover:bg-green-800 text-white px-5 py-2 
+                    rounded-lg text-sm font-bold transition shadow-sm">
+                                    Generate Full Assessment
                                 </button>
                             )}
                         </div>
 
                         {loadingReport ? (
-                            <div className="space-y-3 animate-pulse">
-                                {[1, 2, 3, 4, 5].map(i => (
+                            <div className="space-y-4 animate-pulse p-4">
+                                {[1, 2, 3, 4, 5, 6].map(i => (
                                     <div key={i}
-                                        className={`h-4 bg-slate-700 rounded ${i % 3 === 0 ? 'w-3/4' : 'w-full'}`}
+                                        className={`h-4 bg-gray-100 rounded ${i % 3 === 0 ? 'w-3/4' : 'w-full'}`}
                                     />
                                 ))}
-                                <p className="text-slate-400 text-xs text-center pt-2">
-                                    🤖 Claude is generating the assessment report...
+                                <p className="text-gray-500 text-xs text-center pt-4 font-medium italic">
+                                    🤖 Claude is synthesizing the risk assessment...
                                 </p>
                             </div>
                         ) : aiReport?.full_report ? (
-                            <div className="prose prose-invert prose-sm max-w-none">
-                                <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-line">
+                            <div className="prose prose-sm max-w-none text-gray-800 p-6 bg-gray-50/50 rounded-2xl border border-gray-100">
+                                <p className="leading-relaxed whitespace-pre-line">
                                     {aiReport.full_report}
                                 </p>
                             </div>
                         ) : (
-                            <p className="text-slate-500 text-sm text-center py-8">
-                                Click "Generate Report" to create the AI assessment
-                            </p>
+                            <div className="text-center py-16 bg-gray-50/50 rounded-2xl border border-dashed border-gray-300">
+                                <p className="text-gray-400 text-sm italic">
+                                    Assessment report hasn&apos;t been generated yet for this application.
+                                </p>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -434,31 +453,31 @@ export default function ApplicationDetail() {
 
             {/* Decision Tab */}
             {activeTab === 'decision' && (
-                <div className="max-w-lg space-y-5">
-                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5">
-                        <h3 className="font-bold text-lg">Make a Decision</h3>
+                <div className="max-w-2xl space-y-6">
+                    <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-8 space-y-6">
+                        <h3 className="font-bold text-xl text-gray-900" style={{ fontFamily: "'Playfair Display', serif" }}>Final Credit Decision</h3>
 
                         {/* Decision buttons */}
-                        <div className="space-y-2">
-                            <label className="text-slate-400 text-xs uppercase tracking-wide">
-                                Decision
+                        <div className="space-y-3">
+                            <label className="text-gray-500 text-xs font-bold uppercase tracking-widest pl-1">
+                                SELECT STATUS
                             </label>
-                            <div className="grid grid-cols-1 gap-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 {[
-                                    { value: 'approved', label: '✅ Approve', desc: 'Loan is approved', color: 'border-green-600 bg-green-950 text-green-400' },
-                                    { value: 'rejected', label: '❌ Reject', desc: 'Loan is not approved', color: 'border-red-600 bg-red-950 text-red-400' },
-                                    { value: 'more_info', label: '📋 Request More Info', desc: 'Need additional documents', color: 'border-purple-600 bg-purple-950 text-purple-400' },
-                                    { value: 'under_review', label: '🔍 Mark Under Review', desc: 'Move to active review', color: 'border-blue-600 bg-blue-950 text-blue-400' },
+                                    { value: 'approved', label: '✅ Approve', desc: 'Loan is approved', color: 'border-green-600 bg-green-50 text-green-800 active:bg-green-100' },
+                                    { value: 'rejected', label: '❌ Reject', desc: 'Loan is not approved', color: 'border-red-600 bg-red-50 text-red-800 active:bg-red-100' },
+                                    { value: 'more_info', label: '📋 Request More Info', desc: 'Need additional documents', color: 'border-purple-600 bg-purple-50 text-purple-800 active:bg-purple-100' },
+                                    { value: 'under_review', label: '🔍 Mark Under Review', desc: 'Continued active review', color: 'border-blue-600 bg-blue-50 text-blue-800 active:bg-blue-100' },
                                 ].map(d => (
                                     <button key={d.value}
                                         onClick={() => setDecision(prev => ({ ...prev, status: d.value }))}
-                                        className={`p-4 rounded-xl border-2 text-left transition
+                                        className={`p-4 rounded-xl border-2 text-left transition-all
                       ${decision.status === d.value
-                                                ? d.color
-                                                : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-500'
+                                                ? d.color + ' shadow-md'
+                                                : 'border-gray-100 bg-gray-50/50 text-gray-600 hover:border-gray-300 hover:bg-white'
                                             }`}>
-                                        <p className="font-semibold text-sm">{d.label}</p>
-                                        <p className="text-xs opacity-70 mt-0.5">{d.desc}</p>
+                                        <p className="font-bold text-sm mb-0.5">{d.label}</p>
+                                        <p className="text-[10px] opacity-70 font-medium">{d.desc}</p>
                                     </button>
                                 ))}
                             </div>
@@ -466,10 +485,10 @@ export default function ApplicationDetail() {
 
                         {/* Approved amount — only show when approving */}
                         {decision.status === 'approved' && (
-                            <>
-                                <div className="space-y-1">
-                                    <label className="text-slate-400 text-xs uppercase tracking-wide">
-                                        Approved Amount (₹)
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 animate-in slide-in-from-top-2 duration-300">
+                                <div className="space-y-1.5">
+                                    <label className="text-gray-500 text-[10px] font-bold uppercase tracking-widest pl-1">
+                                        APPROVED AMOUNT (₹)
                                     </label>
                                     <input type="number"
                                         value={decision.approved_amount}
@@ -477,13 +496,13 @@ export default function ApplicationDetail() {
                                             ...p, approved_amount: e.target.value
                                         }))}
                                         placeholder={app.loan_amount?.toString()}
-                                        className="w-full bg-slate-800 border border-slate-700 rounded-xl 
-                      px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                                        className="w-full bg-white border border-gray-300 rounded-lg 
+                      px-4 py-3 text-gray-900 font-bold focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600 shadow-sm"
                                     />
                                 </div>
-                                <div className="space-y-1">
-                                    <label className="text-slate-400 text-xs uppercase tracking-wide">
-                                        Interest Rate (% per annum)
+                                <div className="space-y-1.5">
+                                    <label className="text-gray-500 text-[10px] font-bold uppercase tracking-widest pl-1">
+                                        INTEREST RATE (% p.a.)
                                     </label>
                                     <input type="number" step="0.1"
                                         value={decision.interest_rate}
@@ -491,40 +510,42 @@ export default function ApplicationDetail() {
                                             ...p, interest_rate: e.target.value
                                         }))}
                                         placeholder="12.5"
-                                        className="w-full bg-slate-800 border border-slate-700 rounded-xl 
-                      px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                                        className="w-full bg-white border border-gray-300 rounded-lg 
+                      px-4 py-3 text-gray-900 font-bold focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600 shadow-sm"
                                     />
                                 </div>
-                            </>
+                            </div>
                         )}
 
                         {/* Officer notes */}
-                        <div className="space-y-1">
-                            <label className="text-slate-400 text-xs uppercase tracking-wide">
-                                Officer Notes (visible to borrower)
+                        <div className="space-y-1.5">
+                            <label className="text-gray-500 text-[10px] font-bold uppercase tracking-widest pl-1">
+                                OFFICER NOTES (VISIBLE TO BORROWER)
                             </label>
                             <textarea
                                 value={decision.officer_notes}
                                 onChange={e => setDecision(p => ({ ...p, officer_notes: e.target.value }))}
-                                placeholder="Add notes for the borrower..."
-                                rows={3}
-                                className="w-full bg-slate-800 border border-slate-700 rounded-xl 
-                  px-4 py-3 text-white placeholder-slate-500 focus:outline-none 
-                  focus:border-blue-500 resize-none"
+                                placeholder="Add comments regarding this decision..."
+                                rows={4}
+                                className="w-full bg-white border border-gray-300 rounded-lg 
+                  px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none 
+                  focus:border-green-600 focus:ring-1 focus:ring-green-600 resize-none shadow-sm font-medium"
                             />
                         </div>
 
                         <button
                             onClick={submitDecision}
                             disabled={!decision.status || submittingDecision}
-                            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 
-                py-4 rounded-xl font-semibold transition">
+                            className="w-full bg-green-700 text-white hover:bg-green-800 disabled:opacity-50 
+                py-4 rounded-xl font-bold text-lg transition-all shadow-lg active:scale-[0.98]">
                             {submittingDecision ? 'Submitting...' : 'Submit Decision →'}
                         </button>
 
-                        <p className="text-slate-500 text-xs text-center">
-                            Decision is final and will notify the borrower instantly via realtime update.
-                        </p>
+                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                            <p className="text-gray-500 text-[11px] text-center font-medium">
+                                ℹ️ Submitting this decision will immediately update the borrower&apos;s dashboard and trigger any relevant status change notifications.
+                            </p>
+                        </div>
                     </div>
                 </div>
             )}

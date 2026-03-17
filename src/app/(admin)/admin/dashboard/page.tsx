@@ -49,7 +49,9 @@ export default function DashboardPage() {
 
   const filtered = applications.filter(app => {
     const matchesFilter = filter === 'all' || app.status === filter
-    const name = (app as any).users?.full_name?.toLowerCase() || ''
+    const userData = app.users
+    const user = Array.isArray(userData) ? userData[0] : userData
+    const name = user?.full_name?.toLowerCase() || ''
     return matchesFilter && name.includes(search.toLowerCase())
   })
 
@@ -161,7 +163,8 @@ export default function DashboardPage() {
 
           {/* Rows */}
           {filtered.map((app, idx) => {
-            const user = (app as any).users
+            const userData = app.users
+            const user = Array.isArray(userData) ? userData[0] : userData
             const fraudCount = app.fraud_flags?.length || 0
             const statusStyle = STATUS_STYLES[app.status as keyof typeof STATUS_STYLES] || STATUS_STYLES.pending
             return (

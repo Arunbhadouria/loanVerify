@@ -23,7 +23,7 @@ export default function AnalyticsPage() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <div className="text-slate-400 animate-pulse">Loading analytics...</div>
+      <div className="text-gray-500 animate-pulse">Loading analytics...</div>
     </div>
   )
 
@@ -64,9 +64,9 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6">
 
-      <div>
-        <h1 className="text-2xl font-bold">Analytics</h1>
-        <p className="text-slate-400 text-sm mt-1">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: "'Playfair Display', serif" }}>Analytics</h1>
+        <p className="text-gray-500 text-sm">
           Overview of all loan applications
         </p>
       </div>
@@ -74,24 +74,25 @@ export default function AnalyticsPage() {
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total Applications', value: applications.length, icon: '📋', color: 'text-white' },
-          { label: 'Average Score', value: avgScore, icon: '📊', color: avgScore >= 700 ? 'text-green-400' : avgScore >= 500 ? 'text-yellow-400' : 'text-red-400' },
-          { label: 'Approval Rate', value: `${approvalRate}%`, icon: '✅', color: 'text-green-400' },
-          { label: 'Fraud Flagged', value: fraudFlagged, icon: '🚩', color: 'text-red-400' },
+          { label: 'Total Applications', value: applications.length, icon: '📋', border: 'border-l-gray-400', color: 'text-gray-900' },
+          { label: 'Average Score', value: avgScore, icon: '📊', border: avgScore >= 700 ? 'border-l-green-600' : avgScore >= 500 ? 'border-l-amber-500' : 'border-l-red-500', color: avgScore >= 700 ? 'text-green-700' : avgScore >= 500 ? 'text-amber-700' : 'text-red-700' },
+          { label: 'Approval Rate', value: `${approvalRate}%`, icon: '✅', border: 'border-l-green-600', color: 'text-green-700' },
+          { label: 'Fraud Flagged', value: fraudFlagged, icon: '🚩', border: 'border-l-red-500', color: 'text-red-700' },
         ].map(kpi => (
           <div key={kpi.label}
-            className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+            className={`bg-white border border-gray-200 border-l-4 ${kpi.border} p-5 shadow-sm`}
+            style={{ borderRadius: 4 }}>
             <div className="text-2xl mb-2">{kpi.icon}</div>
             <p className={`text-2xl font-bold ${kpi.color}`}>{kpi.value}</p>
-            <p className="text-slate-400 text-sm mt-1">{kpi.label}</p>
+            <p className="text-gray-500 text-sm mt-1">{kpi.label}</p>
           </div>
         ))}
       </div>
 
       {/* Total loan value */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-        <p className="text-slate-400 text-sm">Total Loan Value in Pipeline</p>
-        <p className="text-3xl font-bold text-blue-400 mt-1">
+      <div className="bg-white border border-gray-200 border-l-4 border-l-green-700 p-5 shadow-sm" style={{ borderRadius: 4 }}>
+        <p className="text-gray-500 text-sm">Total Loan Value in Pipeline</p>
+        <p className="text-3xl font-bold text-gray-900 mt-1">
           ₹{totalLoanValue.toLocaleString('en-IN')}
         </p>
       </div>
@@ -99,32 +100,33 @@ export default function AnalyticsPage() {
       <div className="grid md:grid-cols-2 gap-6">
 
         {/* Score distribution bar chart */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-          <h3 className="font-bold mb-4">Score Distribution</h3>
-          <ResponsiveContainer width="100%" height={220}>
+        <div className="bg-white border border-gray-200 p-6 shadow-sm" style={{ borderRadius: 8 }}>
+          <h3 className="font-bold text-gray-900 mb-6" style={{ fontFamily: "'Playfair Display', serif" }}>Score Distribution</h3>
+          <ResponsiveContainer width="100%" height={250}>
             <BarChart data={scoreRanges}>
-              <XAxis dataKey="range" tick={{ fill: '#94a3b8', fontSize: 11 }} />
-              <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} />
+              <XAxis dataKey="range" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={{ stroke: '#e5e7eb' }} />
+              <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={{ stroke: '#e5e7eb' }} />
               <Tooltip
                 contentStyle={{
-                  background: '#1e293b',
-                  border: 'none',
-                  borderRadius: 8
+                  background: '#ffffff',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: 8,
+                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
                 }} />
-              <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="count" fill="#15803d" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         {/* Status pie chart */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-          <h3 className="font-bold mb-4">Application Status</h3>
+        <div className="bg-white border border-gray-200 p-6 shadow-sm" style={{ borderRadius: 8 }}>
+          <h3 className="font-bold text-gray-900 mb-6" style={{ fontFamily: "'Playfair Display', serif" }}>Application Status</h3>
           {statusData.length === 0 ? (
-            <div className="flex items-center justify-center h-44 text-slate-500 text-sm">
+            <div className="flex items-center justify-center h-56 text-gray-400 text-sm italic">
               No data yet
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie data={statusData} dataKey="value" nameKey="name"
                   cx="50%" cy="50%" outerRadius={80} label>
@@ -134,13 +136,14 @@ export default function AnalyticsPage() {
                 </Pie>
                 <Legend
                   formatter={(value) => (
-                    <span style={{ color: '#94a3b8', fontSize: 12 }}>{value}</span>
+                    <span style={{ color: '#4b5563', fontSize: 12, fontWeight: 500 }}>{value}</span>
                   )} />
                 <Tooltip
                   contentStyle={{
-                    background: '#1e293b',
-                    border: 'none',
-                    borderRadius: 8
+                    background: '#ffffff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: 8,
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
                   }} />
               </PieChart>
             </ResponsiveContainer>
@@ -148,23 +151,23 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Risk band breakdown */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 md:col-span-2">
-          <h3 className="font-bold mb-4">Risk Band Distribution</h3>
+        <div className="bg-white border border-gray-200 p-6 shadow-sm md:col-span-2" style={{ borderRadius: 8 }}>
+          <h3 className="font-bold text-gray-900 mb-6" style={{ fontFamily: "'Playfair Display', serif" }}>Risk Band Distribution</h3>
           <div className="grid grid-cols-3 gap-4">
             {riskData.map((band, i) => (
               <div key={i}
-                className={`rounded-xl p-4 border text-center
-                  ${i === 0 ? 'bg-green-950 border-green-800' :
-                    i === 1 ? 'bg-yellow-950 border-yellow-800' :
-                    'bg-red-950 border-red-800'}`}>
-                <p className={`text-3xl font-bold
-                  ${i === 0 ? 'text-green-400' :
-                    i === 1 ? 'text-yellow-400' : 'text-red-400'}`}>
+                className={`rounded-lg p-5 border text-center shadow-sm
+                  ${i === 0 ? 'bg-green-50 border-green-200' :
+                    i === 1 ? 'bg-amber-50 border-amber-200' :
+                    'bg-red-50 border-red-200'}`}>
+                <p className={`text-4xl font-bold mb-1
+                  ${i === 0 ? 'text-green-700' :
+                    i === 1 ? 'text-amber-700' : 'text-red-700'}`}>
                   {band.value}
                 </p>
-                <p className={`text-xs mt-1
-                  ${i === 0 ? 'text-green-400' :
-                    i === 1 ? 'text-yellow-400' : 'text-red-400'}`}>
+                <p className={`text-sm font-semibold
+                  ${i === 0 ? 'text-green-800' :
+                    i === 1 ? 'text-amber-800' : 'text-red-800'}`}>
                   {band.name}
                 </p>
               </div>
@@ -172,21 +175,21 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Progress bars */}
-          <div className="mt-4 space-y-2">
+          <div className="mt-8 space-y-4">
             {riskData.map((band, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <span className="text-slate-400 text-xs w-32">{band.name}</span>
-                <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div key={i} className="flex items-center gap-4">
+                <span className="text-gray-600 font-medium text-xs w-32">{band.name}</span>
+                <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden border border-gray-200">
                   <div
                     className={`h-full rounded-full transition-all duration-1000
-                      ${i === 0 ? 'bg-green-500' : i === 1 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                      ${i === 0 ? 'bg-green-600' : i === 1 ? 'bg-amber-500' : 'bg-red-600'}`}
                     style={{
                       width: `${applications.length
                         ? (band.value / applications.length) * 100 : 0}%`
                     }}
                   />
                 </div>
-                <span className="text-slate-300 text-xs w-8 text-right">
+                <span className="text-gray-700 font-bold text-xs w-10 text-right">
                   {applications.length
                     ? Math.round((band.value / applications.length) * 100) : 0}%
                 </span>

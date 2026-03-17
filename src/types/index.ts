@@ -30,7 +30,7 @@ export interface Application {
   interest_rate: number
   created_at: string
   updated_at: string
-  users?: User
+  users?: User | User[]
   assets?: Asset[]
   documents?: Document[]
   ai_reports?: AIReport[]
