@@ -230,7 +230,7 @@ export default function ScorePage() {
                 { label: 'Asset Condition', value: assetDetails.condition },
                 { label: 'Asset Value', value: `₹${parseFloat(assetDetails.estimated_value || 0).toLocaleString('en-IN')}` },
                 { label: 'Monthly Income', value: `₹${parseFloat(onboarding.monthly_income || 0).toLocaleString('en-IN')}` },
-                { label: 'Risk Classification', value: band.toUpperCase() },
+                { label: 'Risk Classification', value: bandStyle.label },
               ].map((item, i) => (
                 <div key={item.label} className={`flex justify-between items-center px-5 py-4 ${i !== 0 ? 'border-t border-gray-100' : ''}`}>
                   <span className="text-gray-500 text-sm">{item.label}</span>

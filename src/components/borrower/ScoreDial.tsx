@@ -28,17 +28,13 @@ export default function ScoreDial({ score, animated = true }: Props) {
   }, [score, animated])
 
   const color =
-    score >= 700 ? '#22c55e' :
-    score >= 500 ? '#f59e0b' : '#ef4444'
-
-  const band =
-    score >= 700 ? 'Low Risk' :
-    score >= 500 ? 'Medium Risk' : 'High Risk'
+    score >= 700 ? '#15803d' :
+    score >= 500 ? '#d97706' : '#dc2626'
 
   // SVG arc
   const radius = 80
   const cx = 100
-  const cy = 100
+  const cy = 105
   const startAngle = -210
   const endAngle = 30
   const totalAngle = endAngle - startAngle
@@ -59,36 +55,51 @@ export default function ScoreDial({ score, animated = true }: Props) {
     return `M ${s.x} ${s.y} A ${radius} ${radius} 0 ${largeArc} 1 ${e.x} ${e.y}`
   }
 
+  // Position the 300/900 labels at arc endpoints
+  const startPt = polarToCartesian(startAngle)
+  const endPt = polarToCartesian(endAngle)
+
   return (
     <div className="flex flex-col items-center">
-      <svg viewBox="0 0 200 160" className="w-64 h-48">
+      <svg viewBox="0 0 200 170" className="w-64 h-52">
         {/* Background arc */}
         <path d={describeArc(startAngle, endAngle)}
-          fill="none" stroke="#1e293b" strokeWidth="16" strokeLinecap="round" />
+          fill="none" stroke="#e5e7eb" strokeWidth="16" strokeLinecap="round" />
         {/* Score arc */}
         <path d={describeArc(startAngle, scoreAngle)}
           fill="none" stroke={color} strokeWidth="16" strokeLinecap="round"
           style={{ transition: 'all 0.05s linear' }} />
-        {/* Score text */}
-        <text x={cx} y={cy + 10} textAnchor="middle"
-          fill="white" fontSize="32" fontWeight="bold" fontFamily="monospace">
+
+        {/* Score number */}
+        <text x={cx} y={cy + 8} textAnchor="middle"
+          fill="#111827" fontSize="36" fontWeight="bold" fontFamily="monospace">
           {displayed}
         </text>
-        <text x={cx} y={cy + 30} textAnchor="middle"
-          fill="#94a3b8" fontSize="11">
+        <text x={cx} y={cy + 26} textAnchor="middle"
+          fill="#6b7280" fontSize="11">
           out of 900
         </text>
-        {/* Labels */}
-        <text x="25" y="140" fill="#94a3b8" fontSize="10">300</text>
-        <text x="165" y="140" fill="#94a3b8" fontSize="10">900</text>
-      </svg>
 
-      <div className={`px-6 py-2 rounded-full text-sm font-bold
-        ${score >= 700 ? 'bg-green-950 text-green-400' :
-          score >= 500 ? 'bg-amber-950 text-amber-400' :
-          'bg-red-950 text-red-400'}`}>
-        {band}
-      </div>
+        {/* 300 label at arc start */}
+        <text
+          x={startPt.x + 2}
+          y={startPt.y + 16}
+          textAnchor="middle"
+          fill="#374151"
+          fontSize="13"
+          fontWeight="600"
+        >300</text>
+
+        {/* 900 label at arc end */}
+        <text
+          x={endPt.x - 2}
+          y={endPt.y + 16}
+          textAnchor="middle"
+          fill="#374151"
+          fontSize="13"
+          fontWeight="600"
+        >900</text>
+      </svg>
     </div>
   )
 }

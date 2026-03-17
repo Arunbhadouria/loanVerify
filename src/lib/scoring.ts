@@ -21,41 +21,46 @@ export function calculateCreditScore(input: ScoringInput): {
     behavioral: 0.10,
   }
 
-  // Collateral-to-loan ratio score
+  // Collateral-to-loan ratio score — guard against zero loan amount
+  const safeLoanAmount = Math.max(input.loanAmount, 1)
   const collateralRatio = Math.min(
-    (input.collateralValue / input.loanAmount) * 100, 100
+    (input.collateralValue / safeLoanAmount) * 100, 100
   )
 
-  // Income stability score
-  const incomeScore = Math.min(
-    (input.avgBankBalance / input.monthlyIncome) * 50, 100
-  )
+  // Income stability score — guard against zero income
+  const safeIncome = Math.max(input.monthlyIncome, 1)
+  const incomeScore = input.monthlyIncome === 0
+    ? 0  // no income = zero score
+    : Math.min((input.avgBankBalance / safeIncome) * 50, 100)
 
-  // Debt-to-income score (lower EMI/income = better)
-  const dtiRatio = input.existingEMI / input.monthlyIncome
+  // Debt-to-income score — guard against zero income
+  const dtiRatio = input.monthlyIncome === 0
+    ? 1  // treat as 100% debt ratio (worst case) if no income
+    : input.existingEMI / safeIncome
   const dtiScore = Math.max(0, 100 - dtiRatio * 200)
 
   const breakdown = {
-    paymentHistory: input.paymentHistory,
-    collateral: collateralRatio,
-    incomeStability: incomeScore,
-    debtToIncome: dtiScore,
-    behavioral: input.behavioralScore,
+    paymentHistory: Math.min(Math.max(input.paymentHistory, 0), 100),
+    collateral:     Math.min(Math.max(collateralRatio, 0), 100),
+    incomeStability: Math.min(Math.max(incomeScore, 0), 100),
+    debtToIncome:   Math.min(Math.max(dtiScore, 0), 100),
+    behavioral:     Math.min(Math.max(input.behavioralScore, 0), 100),
   }
 
   // Weighted score mapped to 300-900 range
   const rawScore =
     breakdown.paymentHistory * weights.paymentHistory +
-    breakdown.collateral * weights.collateral +
+    breakdown.collateral     * weights.collateral +
     breakdown.incomeStability * weights.incomeStability +
-    breakdown.debtToIncome * weights.debtToIncome +
-    breakdown.behavioral * weights.behavioral
+    breakdown.debtToIncome   * weights.debtToIncome +
+    breakdown.behavioral     * weights.behavioral
 
   const score = Math.round(300 + (rawScore / 100) * 600)
 
+  // band: 'high' = high credit score (LOW RISK), 'low' = low credit score (HIGH RISK)
   const band =
-    score >= 700 ? 'low' :
-    score >= 500 ? 'medium' : 'high'
+    score >= 700 ? 'high' :
+    score >= 500 ? 'medium' : 'low'
 
   return { score, band, breakdown }
-}
+}
