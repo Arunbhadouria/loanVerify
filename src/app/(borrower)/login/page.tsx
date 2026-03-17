@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 
 type Method = 'phone' | 'email'
 type Step = 'method' | 'input' | 'otp'
@@ -70,7 +71,23 @@ export default function LoginPage() {
       if (method === 'phone') localStorage.setItem('user_phone', phone)
       else localStorage.setItem('user_email', email)
 
-      router.push('/onboarding')
+      // CHECK FOR EXISTING APPLICATION
+      const query = supabase
+        .from('applications')
+        .select('id, users!inner(*)')
+      
+      const { data: apps } = await (method === 'phone' 
+        ? query.eq('users.phone', phone) 
+        : query.eq('users.email', email))
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+      if (apps && apps.length > 0) {
+        localStorage.setItem('application_id', apps[0].id)
+        router.push('/status')
+      } else {
+        router.push('/onboarding')
+      }
     } catch {
       setError('Network error. Please check your connection.')
     } finally {
